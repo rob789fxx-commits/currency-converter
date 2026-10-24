@@ -1,0 +1,58 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build project
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run build
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Detect output folder
+        id: output
+        run: |
+          if [ -d dist ]; then
+            echo "folder=dist" >> "$GITHUB_OUTPUT"
+          elif [ -d build ]; then
+            echo "folder=build" >> "$GITHUB_OUTPUT"
+          else
+            echo "folder=." >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ steps.output.outputs.folder }}
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
